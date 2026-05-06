@@ -17,6 +17,10 @@ try:
     print('RWKV_MY_TESTING', os.environ["RWKV_MY_TESTING"])
 except:
     os.environ["RWKV_MY_TESTING"] = ''
+try:
+    print('RWKV_KERNEL', os.environ["RWKV_KERNEL"])
+except:
+    os.environ["RWKV_KERNEL"] = ''
 
 def __nop(ob):
     return ob
@@ -42,10 +46,15 @@ if 'x070' in os.environ["RWKV_MY_TESTING"]:
 
     # check https://github.com/BlinkDL/RWKV-CUDA/blob/main/rwkv7_fast_fused/rwkv7_cuda_benchmark.py
     #
-    # use rwkv7_clampw_v3.cpp and rwkv7_clampw_v3_for_h100.cu for 20% faster fwd & bwd kernel on H100s
+    # use rwkv7_clampw_v3.cpp and rwkv7_clampw_v3_for_h100.cu for 20% faster fwd & bwd kernel on H100s and some consumer GPUS (for some Bsz*Headcount)
 
     flags = ['-res-usage', f'-D_N_={HEAD_SIZE}', f"-D_CHUNK_LEN_={CHUNK_LEN}", "--use_fast_math", "-O3", "-Xptxas -O3", "--extra-device-vectorization"]
-    load(name="rwkv7_clampw", sources=[f'cuda/rwkv7_clampw.cu', 'cuda/rwkv7_clampw.cpp'], is_python_module=False, verbose=True, extra_cuda_cflags=flags)
+    if "@rwkv3" in os.environ["RWKV_KERNEL"]:
+        RWKV7_CLAMPW_OP = torch.ops.rwkv7_clampw_v3
+        load(name="rwkv7_clampw_v3", sources=['cuda/rwkv7_clampw_v3_for_h100.cu', 'cuda/rwkv7_clampw_v3.cpp'], is_python_module=False, verbose=True, extra_cuda_cflags=flags)
+    else:
+        RWKV7_CLAMPW_OP = torch.ops.rwkv7_clampw
+        load(name="rwkv7_clampw", sources=['cuda/rwkv7_clampw.cu', 'cuda/rwkv7_clampw.cpp'], is_python_module=False, verbose=True, extra_cuda_cflags=flags)
     class RWKV7_CLAMPW_CUDA_OP(torch.autograd.Function):
         @staticmethod
         def forward(ctx,r,w,k,v,a,b):
@@ -56,7 +65,7 @@ if 'x070' in os.environ["RWKV_MY_TESTING"]:
             y = torch.empty_like(v)
             s = torch.empty(B,H,T//CHUNK_LEN,N,N, dtype=torch.float32,device=w.device)
             sa = torch.empty(B,T,H,N, dtype=torch.float32,device=w.device)
-            torch.ops.rwkv7_clampw.forward(r,w,k,v,a,b,y,s,sa)
+            RWKV7_CLAMPW_OP.forward(r,w,k,v,a,b,y,s,sa)
             ctx.save_for_backward(r,w,k,v,a,b,s,sa)
             return y
         @staticmethod
@@ -65,7 +74,7 @@ if 'x070' in os.environ["RWKV_MY_TESTING"]:
             assert all(i.is_contiguous() for i in [dy])
             r,w,k,v,a,b,s,sa = ctx.saved_tensors
             dr,dw,dk,dv,da,db = [torch.empty_like(x) for x in [r,w,k,v,a,b]]
-            torch.ops.rwkv7_clampw.backward(r,w,k,v,a,b,dy,s,sa,dr,dw,dk,dv,da,db)
+            RWKV7_CLAMPW_OP.backward(r,w,k,v,a,b,dy,s,sa,dr,dw,dk,dv,da,db)
             return dr,dw,dk,dv,da,db
     def RWKV7_CLAMPW_CUDA(r,w,k,v,a,b):
         B,T,HN = r.shape

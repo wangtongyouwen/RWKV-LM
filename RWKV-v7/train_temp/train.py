@@ -54,6 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--load_partial", default=0, type=int)
     parser.add_argument("--magic_prime", default=0, type=int)
     parser.add_argument("--my_testing", default='x070', type=str)
+    parser.add_argument("--kernel", default="", type=str)
     parser.add_argument("--my_exit_tokens", default=0, type=int)
 
     parser = Trainer.add_argparse_args(parser)
@@ -90,6 +91,7 @@ if __name__ == "__main__":
     args.betas = (args.beta1, args.beta2)
     args.real_bsz = int(args.num_nodes) * int(args.devices) * args.micro_bsz
     os.environ["RWKV_MY_TESTING"] = args.my_testing
+    os.environ["RWKV_KERNEL"] = args.kernel
     os.environ["RWKV_CTXLEN"] = str(args.ctx_len)
     os.environ["RWKV_HEAD_SIZE"] = str(args.head_size)
     os.environ["RWKV_HEAD_L2WRAP_CE_CHUNK"] = str(args.head_chunk)
