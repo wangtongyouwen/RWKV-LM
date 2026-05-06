@@ -50,6 +50,7 @@ if __name__ == "__main__":
     parser.add_argument("--ds_bucket_mb", default=200, type=int)  # deepspeed bucket size in MB. 200 seems enough
 
     parser.add_argument("--head_size", default=64, type=int) # can try larger values for larger models
+    parser.add_argument("--head_chunk", default=0, type=int) # 0 = fast, takes more VRAM; 65536 = saves 70% VRAM (when your bsz is large), slower; 4096 = saves 80% VRAM (when your bsz is large), slower
     parser.add_argument("--load_partial", default=0, type=int)
     parser.add_argument("--magic_prime", default=0, type=int)
     parser.add_argument("--my_testing", default='x070', type=str)
@@ -91,6 +92,7 @@ if __name__ == "__main__":
     os.environ["RWKV_MY_TESTING"] = args.my_testing
     os.environ["RWKV_CTXLEN"] = str(args.ctx_len)
     os.environ["RWKV_HEAD_SIZE"] = str(args.head_size)
+    os.environ["RWKV_HEAD_L2WRAP_CE_CHUNK"] = str(args.head_chunk)
     if args.dim_att <= 0:
         args.dim_att = args.n_embd
     if args.dim_ffn <= 0:

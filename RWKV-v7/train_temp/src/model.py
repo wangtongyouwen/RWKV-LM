@@ -28,10 +28,6 @@ if os.environ["RWKV_JIT_ON"] == "1":
     MyModule = torch.jit.ScriptModule
     MyFunction = torch.jit.script_method
 
-# os.environ["RWKV_HEAD_L2WRAP_CE_CHUNK"] = '4096' # saves 80% VRAM, slower
-# os.environ["RWKV_HEAD_L2WRAP_CE_CHUNK"] = '65536' # saves 70% VRAM, sometimes faster than '4096'
-os.environ["RWKV_HEAD_L2WRAP_CE_CHUNK"] = '0' # fast, takes more VRAM
-
 ########################################################################################################
 # CUDA Kernel
 ########################################################################################################

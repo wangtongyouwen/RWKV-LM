@@ -3,6 +3,8 @@
 #
 # This will generate the initial model, and save it to the output folder
 #
+# !!! If launch gets stuck, clean lock files in your TORCH_EXTENSIONS_DIR !!!
+#
 #######################################################################################################################
 #
 # Please firstly create data folder & Download minipile (1498226207 tokens, around 3GB)

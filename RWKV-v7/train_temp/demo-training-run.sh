@@ -7,6 +7,8 @@
 # The trainer will load the last rwkv-*.pth in the folder, such that it can continue from a stopped run
 # Therefore check the log (### Loading rwkv-xxx.pth... ###), and make sure you don't have extra rwkv-*.pth there
 #
+# !!! If launch gets stuck, clean lock files in your TORCH_EXTENSIONS_DIR !!!
+#
 #######################################################################################################################
 #
 MODEL_TYPE="x070" # x070 => rwkv-7.0
@@ -33,10 +35,11 @@ rm "$PROJ_DIR"/rwkv-final.pth
 # Larger model => use smaller LR
 # Finetuning => use very small LR, such as 1e-5
 #
-M_BSZ="16" # takes ~9G VRAM here => reduce this to save VRAM, increase this for faster speed
+M_BSZ="16" # takes ~7G VRAM => reduce this to save VRAM, increase this for faster speed; try larger bsz (can use HEAD_CHUNK to save VRAM) for lower loss
 LR_INIT="6e-4"
 LR_FINAL="6e-5"
 GRAD_CP=1 # 1 => slower, save VRAM; 0 => faster, more VRAM
+HEAD_CHUNK=0 # 0 => faster, more VRAM; 65536 => slower, less VRAM; 4096 => slower, even less VRAM; (Note: this is LM head, not RWKV head)
 EPOCH_SAVE=10 # save every 10 "miniepochs" (1 miniepoch = 40320 * ctx_len tokens) => decrease if your GPU is weak
 #
 #######################################################################################################################
@@ -54,5 +57,5 @@ python train.py --load_model "0" --wandb "Test" --proj_dir $PROJ_DIR --my_testin
  --data_file "data/minipile" --my_exit_tokens 1498226207 --magic_prime 2926181 \
  --num_nodes $N_NODE --micro_bsz $M_BSZ --n_layer $N_LAYER --n_embd $N_EMBD \
  --lr_init $LR_INIT --lr_final $LR_FINAL --warmup_steps 10 --beta1 0.9 --beta2 0.99 --adam_eps 1e-18 --data_type "binidx" --vocab_size 65536 \
- --weight_decay 0.001 --epoch_save $EPOCH_SAVE --head_size 64 \
+ --weight_decay 0.001 --epoch_save $EPOCH_SAVE --head_size 64 --head_chunk $HEAD_CHUNK \
  --accelerator gpu --devices $GPU_PER_NODE --precision bf16 --strategy deepspeed_stage_2 --grad_cp $GRAD_CP --enable_progress_bar True #--ds_bucket_mb $DS_BUCKET_MB
